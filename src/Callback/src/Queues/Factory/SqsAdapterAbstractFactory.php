@@ -11,8 +11,8 @@ namespace rollun\callback\Queues\Factory;
 use Aws\Sqs\SqsClient;
 use Interop\Container\ContainerInterface;
 use InvalidArgumentException;
-use ReputationVIP\QueueClient\Adapter\SQSAdapter;
 use ReputationVIP\QueueClient\PriorityHandler\StandardPriorityHandler;
+use rollun\callback\Queues\Adapter\SqsAdapter;
 use Zend\ServiceManager\Factory\AbstractFactoryInterface;
 
 /**
@@ -28,6 +28,7 @@ use Zend\ServiceManager\Factory\AbstractFactoryInterface;
  *              'sqsClientConfig' => [
  *
  *              ],
+ *              'timeInFlight' => 30,
  *          ],
  *          'requestedServiceName2' => [
  *
@@ -44,6 +45,8 @@ class SqsAdapterAbstractFactory implements AbstractFactoryInterface
     const KEY_PRIORITY_HANDLER = 'priorityHandler';
 
     const KEY_SQS_CLIENT_CONFIG = 'sqsClientConfig';
+
+    const KEY_TIME_IN_FLIGHT = 'timeInFlight';
 
     /**
      * @param ContainerInterface $container
@@ -79,8 +82,17 @@ class SqsAdapterAbstractFactory implements AbstractFactoryInterface
             throw new InvalidArgumentException("Invalid option '" . self::KEY_SQS_CLIENT_CONFIG . "'");
         }
 
-        $sqsClient = SqsClient::factory($serviceConfig[self::KEY_SQS_CLIENT_CONFIG]);
+        if (!isset($serviceConfig[self::KEY_TIME_IN_FLIGHT])) {
+            throw new InvalidArgumentException("Invalid option '" . self::KEY_SQS_CLIENT_CONFIG . "'");
+        }
 
-        return new SQSAdapter($sqsClient, $priorityHandler);
+        $sqsClient = SqsClient::factory($serviceConfig[self::KEY_SQS_CLIENT_CONFIG]);
+        $timeInFlight = $serviceConfig[self::KEY_TIME_IN_FLIGHT];
+
+        $attributes = [
+            'VisibilityTimeout' => $timeInFlight,
+        ];
+
+        return new SQSAdapter($sqsClient, $priorityHandler, $attributes);
     }
 }

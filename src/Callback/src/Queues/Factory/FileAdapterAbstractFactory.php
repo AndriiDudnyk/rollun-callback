@@ -10,9 +10,8 @@ namespace rollun\callback\Queues\Factory;
 
 use Interop\Container\ContainerInterface;
 use InvalidArgumentException;
-use ReputationVIP\QueueClient\Adapter\FileAdapter;
 use ReputationVIP\QueueClient\PriorityHandler\ThreeLevelPriorityHandler;
-use rollun\callback\Queues\QueueClient;
+use rollun\callback\Queues\Adapter\FileAdapter;
 use Zend\ServiceManager\Factory\AbstractFactoryInterface;
 
 /**
@@ -25,7 +24,8 @@ use Zend\ServiceManager\Factory\AbstractFactoryInterface;
  *      FileAdapterAbstractFactory::class => [
  *          'requestedServiceName1' => [
  *              'priorityHandler' => 'priorityHandlerServiceName',
- *              'storageDirPath' => 'path/to/directory', // default 'data/queues'
+ *              'storageDirPath' => 'path/to/directory', // default 'data/queues',
+ *              'timeInFlight' => 30
  *          ],
  *          'requestedServiceName2' => [
  *
@@ -42,6 +42,8 @@ class FileAdapterAbstractFactory implements AbstractFactoryInterface
     const KEY_STORAGE_DIR_PATH = 'storageDirPath';
 
     const KEY_PRIORITY_HANDLER = 'priorityHandler';
+
+    const KEY_TIME_IN_FLIGHT = 'timeInFlight';
 
     /**
      * @param ContainerInterface $container
@@ -73,12 +75,17 @@ class FileAdapterAbstractFactory implements AbstractFactoryInterface
             $priorityHandler = $container->get(ThreeLevelPriorityHandler::class);
         }
 
-        if (isset($serviceConfig[self::KEY_STORAGE_DIR_PATH])) {
-            $storageDirPath = $serviceConfig[self::KEY_STORAGE_DIR_PATH];
-        } else {
-            $storageDirPath = 'data' . DIRECTORY_SEPARATOR . 'queues';
+        if (!isset($serviceConfig[self::KEY_STORAGE_DIR_PATH])) {
+            throw new InvalidArgumentException("Invalid option '" . self::KEY_STORAGE_DIR_PATH . "'");
         }
 
-        return new FileAdapter($storageDirPath, $priorityHandler);
+        if (!isset($serviceConfig[self::KEY_TIME_IN_FLIGHT])) {
+            throw new InvalidArgumentException("Invalid option '" . self::KEY_TIME_IN_FLIGHT . "'");
+        }
+
+        $storageDirPath = $serviceConfig[self::KEY_STORAGE_DIR_PATH];
+        $timeInFlight = $serviceConfig[self::KEY_TIME_IN_FLIGHT];
+
+        return new FileAdapter($storageDirPath, $timeInFlight, $priorityHandler);
     }
 }
